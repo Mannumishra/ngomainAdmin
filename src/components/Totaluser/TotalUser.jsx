@@ -1,42 +1,43 @@
-import React, { useState } from 'react';
-import {useNavigate} from 'react-router-dom'
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const TotalUser = () => {
-    const [searchTerm, setSearchTerm] = useState("");  
+    const [data, setData] = useState([]); // State to hold user data from API
+    const [searchTerm, setSearchTerm] = useState("");
     const [selectedFilter, setSelectedFilter] = useState("");
-    const [selectedMonth, setSelectedMonth] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 10;
     const navigate = useNavigate();
 
-    const usersData = [
+    // Fetch data from API
+    const getapiData = async () => {
+        try {
+            const res = await axios.get("http://localhost:8000/api/get-signups");
+            if (res.data.success) {
+                setData(res.data.data); // Set API data to state
+            }
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
 
-        { srNo: 1, name: "Aarav", orderNo: "---", logid: "SS507RAJARANI", amount: "10",timestamp: "2024-03-10 11:15 AM" },
-        { srNo: 2, name: "Tanishka", orderNo: "---", logid: "SR507RAJARANI", amount: "15",timestamp: "2024-03-10 11:15 AM" },
-        { srNo: 3, name: "Nikhil", orderNo: "RETAILORDER-838504", logid: "SA507RAJARANI", amount: "12",timestamp: "2024-03-10 11:15 AM"},
-        { srNo: 4, name: "Swati", orderNo: "RETAILORDER-852741", logid: "SQ507RAJARANI", amount: "20", timestamp: "2024-03-10 11:15 AM" },
-        { srNo: 5, name: "Aditya", orderNo: "RETAILORDER-789652", logid: "SZ507RAJARANI", amount: "25",timestamp: "2024-03-10 11:15 AM" },
-        { srNo: 6, name: "Kavya", orderNo: "RETAILORDER-963252", logid: "SL507RAJARANI", amount: "10",timestamp: "2024-03-10 11:15 AM"},
-        
-    ];
+    useEffect(() => {
+        getapiData();
+    }, []);
 
-    // Filter and sort users
-    const filteredUsers = usersData
+    // Filter and search users
+    const filteredUsers = data
         .filter(user =>
-            user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            user.logid.toLowerCase().includes(searchTerm.toLowerCase()) 
-        )
-        .filter(user =>
-            (selectedMonth ? user.month === selectedMonth : true) 
+            user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.logId.toLowerCase().includes(searchTerm.toLowerCase())
         )
         .sort((a, b) => {
-            if (selectedFilter === "A to Z") return a.name.localeCompare(b.name);
-            if (selectedFilter === "High to Low") return parseFloat(b.amount) - parseFloat(a.amount);
-            if (selectedFilter === "Low to High") return parseFloat(a.amount) - parseFloat(b.amount);
-            return a.srNo - b.srNo;
+            if (selectedFilter === "A to Z") return a.firstName.localeCompare(b.firstName);
+            return 0; // Default sorting
         });
 
-    // Pagination
+    // Pagination logic
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
@@ -52,14 +53,18 @@ const TotalUser = () => {
                 <div className="row mt-3">
                     <div className="col-9">
                         <h3 className="mb-2">All Users List</h3>
-                        <p className="mb-3">List of all Paid and Unpaid Users List</p>
+                        <p className="mb-3">List of all Paid and Unpaid Users</p>
                     </div>
                     <div className="col-3">
-                        <input type="text" placeholder="Search by Name or Logid" className="form-control mb-3" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-
+                        <input
+                            type="text"
+                            placeholder="Search by Name or Log ID"
+                            className="form-control mb-3"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                 </div>
-
             </div>
 
             <div className="table-responsive">
@@ -68,9 +73,10 @@ const TotalUser = () => {
                         <tr>
                             <th scope="col">Sr No</th>
                             <th scope="col">Name</th>
-                            <th scope="col">Parent Id</th>
-                            <th scope="col">Log Id</th>
-                            <th scope="col">Lavel</th>
+                            <th scope="col">Log ID</th>
+                            <th scope="col">Mobile</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">Role</th>
                             <th scope="col">Join Date</th>
                             <th scope="col">Details</th>
                         </tr>
@@ -78,21 +84,24 @@ const TotalUser = () => {
                     <tbody>
                         {currentUsers.length > 0 ? (
                             currentUsers.map((user, index) => (
-                                <tr key={index}>
-                                    <th scope="row">{user.srNo}</th>
-                                    <td>{user.name}</td>
-                                    <td>{user.orderNo}</td>
-                                    <td>{user.logid}</td>
-                                    <td>{user.amount}</td>
-                                    <td>{user.timestamp}</td>
+                                <tr key={user._id}>
+                                    <td>{indexOfFirstUser + index + 1}</td>
+                                    <td>{`${user.firstName} ${user.lastName}`}</td>
+                                    <td>{user.logId}</td>
+                                    <td>{user.mobile}</td>
+                                    <td>{user.email}</td>
+                                    <td>{user.role}</td>
+                                    <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                                     <td>
-                                        <button className="details" onClick={() => handleView(user)}>View</button>
+                                        <button className="details" onClick={() => handleView(user)}>
+                                            View
+                                        </button>
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6">No users found</td>
+                                <td colSpan="8">No users found</td>
                             </tr>
                         )}
                     </tbody>
@@ -101,13 +110,19 @@ const TotalUser = () => {
 
             {/* Pagination Controls */}
             <div className="d-flex justify-content-center align-items-center">
-                <button className="btn btn-secondary me-2" onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1} style={{ background: "#22B6AF", border: "none" }}>
+                <button
+                    className="btn btn-secondary me-2"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                >
                     Previous
                 </button>
                 <span>Page {currentPage} of {totalPages}</span>
-                <button className="btn btn-secondary ms-2" onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages} style={{ background: "#22B6AF", border: "none" }} >
+                <button
+                    className="btn btn-secondary ms-2"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                >
                     Next
                 </button>
             </div>
